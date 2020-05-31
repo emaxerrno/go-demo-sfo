@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	consumerName  = flag.String("consumerid", "sfo-consumer", "name of consumer id in logs")
 	brokerList    = flag.String("brokers", "localhost:9092", "The comma separated list of brokers in the Kafka cluster")
 	topic         = flag.String("topic", "sanfrancisco", "The topic to consume")
 	verbose       = flag.Bool("verbose", false, "Whether to turn on sarama logging")
@@ -29,7 +30,7 @@ func main() {
 	config.Version = sarama.V2_2_0_0
 	config.Consumer.Return.Errors = true
 	config.Consumer.Offsets.Initial = sarama.OffsetNewest
-	config.ClientID = "veramine"
+	config.ClientID = *consumerName
 
 	// Start with a client
 	client, err := sarama.NewClient(strings.Split(*brokerList, ","), config)
@@ -39,7 +40,7 @@ func main() {
 	defer client.Close()
 
 	// Start a new consumer group
-	consumergroup, err = sarama.NewConsumerGroupFromClient("veramine-consumer", client)
+	consumergroup, err = sarama.NewConsumerGroupFromClient(fmt.Sprintf("%s-group", *consumerName), client)
 	if err != nil {
 		panic(err)
 	}
@@ -58,7 +59,7 @@ func ProcessingLoop() {
 
 	for {
 		handler := &KafkaConsumerGroupHandler{}
-		err := consumergroup.Consume(ctx, []string{"sanfrancisco"}, handler)
+		err := consumergroup.Consume(ctx, []string{*topic}, handler)
 		if err != nil {
 			logger.Println("ProcessingLoop err:", err)
 			break
@@ -98,7 +99,7 @@ func (h KafkaConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession
 
 		err := h.ProcessMessage(key, msg.Offset, msg.Value)
 		if err != nil {
-			fmt.Printf("Err %v\n", err)
+			logger.Println("Error consuming: ", err)
 			break
 		}
 	}
@@ -106,6 +107,6 @@ func (h KafkaConsumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession
 }
 
 func (h KafkaConsumerGroupHandler) ProcessMessage(key []byte, ofs int64, buf []byte) error {
-	logger.Printf("[%v]", ofs)
+	logger.Println("Offset: ", ofs)
 	return nil
 }
