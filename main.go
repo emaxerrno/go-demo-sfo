@@ -29,7 +29,7 @@ func main() {
 	config := sarama.NewConfig()
 	config.Version = sarama.V2_2_0_0
 	config.Consumer.Return.Errors = true
-	config.Consumer.Offsets.Initial = sarama.OffsetNewest
+	config.Consumer.Offsets.Initial = sarama.OffsetOldest
 	config.ClientID = *consumerName
 
 	// Start with a client
